@@ -45,8 +45,10 @@ data LSPContext[&T <: Tree]
 
 // start an LSP instance in the background.
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
+@java{engineering.swat.rascal.lsp.LSPServer}
 loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
 
+@java{engineering.swat.rascal.lsp.LSPServer}
 void registerLanguage(loc lspServer, str languageName,
     type[&T <: Tree] grammar,
     LSPSummary (&T tree, LSPContext[&T] ctx) calculateSummary, 

@@ -1,4 +1,4 @@
-package engineering.swat.rascal.lsp;
+package engineering.swat.rascal.lsp.util;
 
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -7,9 +7,9 @@ import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 
-public class SimpleLookup implements LocationToRangeMap {
+public class TreeMapLookup implements LocationToRangeMap {
 	
-	private final NavigableMap<Location, Location> data = new TreeMap<>(SimpleLookup::compareLocations);
+	private final NavigableMap<Location, Location> data = new TreeMap<>(TreeMapLookup::compareLocations);
 	
 	private static int compareLocations(Location a, Location b) {
 		int result = a.getUri().compareTo(b.getUri());

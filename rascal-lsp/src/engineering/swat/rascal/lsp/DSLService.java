@@ -45,6 +45,8 @@ import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.rascalmpl.uri.URIUtil;
+import engineering.swat.rascal.lsp.util.LocationToRangeMap;
+import engineering.swat.rascal.lsp.util.TreeMapLookup;
 import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
 import io.usethesource.vallang.ITuple;
@@ -119,7 +121,7 @@ public class DSLService implements TextDocumentService {
 	
 	private void processChanges(ISourceLocation loc, String contents) {
 		defineMap.put(loc, useDefCalculation.apply(contents, loc).thenApplyAsync((useDefs) -> {
-			SimpleLookup result = new SimpleLookup();
+			TreeMapLookup result = new TreeMapLookup();
 			if (useDefs != null) {
 				for (IValue ent: useDefs) {
 					if (ent instanceof ITuple) {

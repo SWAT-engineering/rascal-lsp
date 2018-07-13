@@ -1,18 +1,18 @@
-package engineering.swat.rascal.lsp;
+package engineering.swat.rascal.lsp.util;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.junit.jupiter.api.Test;
-import engineering.swat.rascal.lsp.SimpleLookup;
+import engineering.swat.rascal.lsp.util.TreeMapLookup;
 
 public class LookupTest {
 	
 	
 	@Test
 	public void testSimpleLookup() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,7)));
 		target.add(use, def);
@@ -21,7 +21,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupInside() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
@@ -31,7 +31,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupFront() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
@@ -41,7 +41,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupEnd() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
@@ -51,7 +51,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupInside1() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
@@ -63,7 +63,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupFront1() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
@@ -75,7 +75,7 @@ public class LookupTest {
 
 	@Test
 	public void testSimpleLookupEnd1() {
-		SimpleLookup target = new SimpleLookup();
+		TreeMapLookup target = new TreeMapLookup();
 		Location def = new Location("", new Range(new Position(1,1), new Position(1,3)));
 		Location use = new Location("", new Range(new Position(1,5), new Position(1,8)));
 		target.add(use, def);
