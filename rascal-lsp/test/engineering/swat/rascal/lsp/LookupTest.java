@@ -1,10 +1,11 @@
-package org.rascalmpl.lsp;
+package engineering.swat.rascal.lsp;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.junit.jupiter.api.Test;
+import engineering.swat.rascal.lsp.SimpleLookup;
 
 public class LookupTest {
 	

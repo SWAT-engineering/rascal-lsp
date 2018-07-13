@@ -1,4 +1,4 @@
-package org.rascalmpl.lsp;
+package engineering.swat.rascal.lsp;
 
 import java.util.Map.Entry;
 import java.util.NavigableMap;

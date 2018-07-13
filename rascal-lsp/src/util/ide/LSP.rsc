@@ -12,11 +12,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 }
 module util::ide::LSP
 
-import util::Reflective;
+import util::Reflective; 
 
 data LSPSummary(
     rel[loc use, loc def] definition = {},
-    rel[loc use, loc typeDef] typeDefinition = {},
+    rel[loc use, loc typeDef] typeDefinition = {}, 
     rel[loc use, loc implementation] implementation = {},
 
     // a flat list of all symbols in the file, hierarchy is not supported
@@ -47,7 +47,7 @@ data LSPContext[&T <: Tree]
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
 loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
 
-void registerLanguage(loc lspServer, str languageName, 
+void registerLanguage(loc lspServer, str languageName,
     type[&T <: Tree] grammar,
     LSPSummary (&T tree, LSPContext[&T] ctx) calculateSummary, 
     set[LSPCapability[&T]] capabilities, 

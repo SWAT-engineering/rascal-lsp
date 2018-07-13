@@ -1,4 +1,4 @@
-package org.rascalmpl.lsp;
+package engineering.swat.rascal.lsp;
 
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Range;

@@ -1,4 +1,4 @@
-package org.rascalmpl.lsp;
+package engineering.swat.rascal.lsp;
 
 import java.net.URISyntaxException;
 import java.util.Collections;
