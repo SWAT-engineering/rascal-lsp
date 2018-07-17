@@ -169,7 +169,7 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
                             }
                         } catch (ParseError e) {
                         	if (currentContents == fileContents) {
-                        		parent.replaceDiagnostics(
+                        		parent.replaceDiagnostics(file,
                                     Stream.of(e)
                                     .map(e1 -> new SimpleEntry<>(file, translateDiagnostic(e1)))
                                 );
@@ -186,11 +186,11 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
                 }, javaSchedular);
 
                 CompletableFuture<Summary> newSummaryCalculate = newTreeCalculate.thenApplyAsync(
-                		(t) -> getLanguage().getImplementation().calculateSummary(t, previousSummary)
-                		, rascalSchedular);
+                		(t) -> getLanguage().getImplementation().calculateSummary(t, previousSummary, parent)
+                , rascalSchedular);
 
                 newSummaryCalculate.thenAcceptAsync((s) -> {
-                	parent.replaceDiagnostics(s.getDiagnostics().map(d -> 
+                	parent.replaceDiagnostics(file, s.getDiagnostics().map(d -> 
                 		new SimpleEntry<>(
                 			((ISourceLocation)d.get("at")).top()
                 			, translateDiagnostic(d)
@@ -277,12 +277,14 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 	}
 
 
-	public void replaceDiagnostics(Stream<Entry<ISourceLocation, Diagnostic>> diagnostics) {
-		groupByKey(diagnostics)
-			.forEach((file, msgs) -> {
-                client.publishDiagnostics(new PublishDiagnosticsParams(file.getURI().toString(), msgs));
-                currentDiagnostics.replace(file, msgs);
-            });
+	public void replaceDiagnostics(ISourceLocation clearFor, Stream<Entry<ISourceLocation, Diagnostic>> diagnostics) {
+		Map<ISourceLocation, List<Diagnostic>> grouped = groupByKey(diagnostics);
+		grouped.putIfAbsent(clearFor, Collections.emptyList());
+
+		grouped.forEach((file, msgs) -> {
+			client.publishDiagnostics(new PublishDiagnosticsParams(file.getURI().toString(), msgs));
+			currentDiagnostics.replace(file, msgs);
+		});
 	}
 	
 	private static <K,V> Map<K, List<V>> groupByKey(Stream<Entry<K, V>> diagnostics) {

@@ -14,8 +14,9 @@ package engineering.swat.rascal.lsp;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Supplier;
 import org.rascalmpl.ast.KeywordFormal;
 import org.rascalmpl.interpreter.IEvaluatorContext;
 import org.rascalmpl.interpreter.env.Environment;
@@ -31,16 +32,15 @@ import org.rascalmpl.interpreter.types.ReifiedType;
 import org.rascalmpl.interpreter.utils.RuntimeExceptionFactory;
 import org.rascalmpl.parser.gtd.IGTD;
 import org.rascalmpl.parser.gtd.exception.ParseError;
-import org.rascalmpl.parser.gtd.result.action.IActionExecutor;
 import org.rascalmpl.parser.gtd.result.out.DefaultNodeFlattener;
 import org.rascalmpl.parser.uptr.UPTRNodeFactory;
-import org.rascalmpl.parser.uptr.action.RascalFunctionActionExecutor;
 import org.rascalmpl.semantics.dynamic.Import;
 import org.rascalmpl.values.uptr.ITree;
 import org.rascalmpl.values.uptr.SymbolAdapter;
 import engineering.swat.rascal.lsp.model.Summary;
 import io.usethesource.vallang.IBool;
 import io.usethesource.vallang.IConstructor;
+import io.usethesource.vallang.IList;
 import io.usethesource.vallang.IMap;
 import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
@@ -64,16 +64,15 @@ public class RascalBridge {
 	private final Type grammarType;
 	private final Type lspContextType;
 	private final Type lspContextConstructorType;
+	private final Type lspSummaryType;
 
-	private final IGTD<IConstructor, ITree, ISourceLocation> parser;
+	private final Class<? extends IGTD> parser;
 	private final String rootName;
-	private final ILSPContext lspServerContext;
 	private final ICallableValue parserFunction;
 	private final ICallableValue reportMoreFunction;
+	private final AtomicReference<ILSPContext> currentLspContext;
 
-	public RascalBridge(IValue grammar, IValue calculateSummary, ISet capabilities, IConstructor pathConfig, IBool allowAmbiguity, IEvaluatorContext ctx, ILSPContext lspServerContext) {
-
-		this.lspServerContext = lspServerContext;
+	public RascalBridge(IValue grammar, IValue calculateSummary, ISet capabilities, IConstructor pathConfig, IBool allowAmbiguity, IEvaluatorContext ctx) {
 		this.grammarType = getGrammarType(grammar, grammar.getType());
 		//this.startNonTerminal = (IConstructor)grammar;
 
@@ -85,7 +84,7 @@ public class RascalBridge {
 		
 		synchronized(eval) {
 			IConstructor startSort = (IConstructor) ((IConstructor) grammar).get("symbol");
-			parser = Import.getParser(eval.getEvaluator(), (ModuleEnvironment) eval.getCurrentEnvt().getRoot(), (IMap) ((IConstructor)grammar).get("definitions"), false);
+			parser = Import.getParser(eval.getEvaluator(), (ModuleEnvironment) eval.getCurrentEnvt().getRoot(), (IMap) ((IConstructor)grammar).get("definitions"), false).getClass();
 			String name = "";
 			if (SymbolAdapter.isStartSort(startSort)) {
 				name = "start__";
@@ -96,15 +95,24 @@ public class RascalBridge {
 				name += SymbolAdapter.getName(startSort);
 			}
 			rootName = name;
-            lspContextType = getLSPContextType(eval).instantiate(Collections.singletonMap(TF.parameterType("T"), grammarType));
-            lspContextConstructorType = getLSPContextConstructorType(ctx).instantiate(Collections.singletonMap(TF.parameterType("T"), grammarType));
+            lspContextType = ((FunctionType)calculateSummary.getType()).getArgumentTypes().getFieldType(1);
+            lspContextConstructorType = getLSPContextConstructorType(ctx);
+            lspSummaryType = getLSPSummaryType(ctx);
             summaryCalculationType = new Type[] { grammarType, lspContextType };
-            parserFunction = buildGetParseTreeFunction(eval, grammarType, lspContextConstructorType, lspServerContext::getTree);
-            reportMoreFunction = buildReportMoreFunction(eval, lspContextConstructorType, lspServerContext::report);
+            currentLspContext = new AtomicReference<>(null);
+            parserFunction = buildGetParseTreeFunction(eval, grammarType, lspContextConstructorType, () -> currentLspContext.get()::getTree);
+            reportMoreFunction = buildReportMoreFunction(eval, lspContextConstructorType, () -> currentLspContext.get()::report);
 		}
-		
 	}
 	
+	private static Type getLSPSummaryType(IEvaluatorContext ctx) {
+		ModuleEnvironment coreModule = ctx.getHeap().getModule("util::ide::LSP");
+		if (coreModule != null) {
+			return coreModule.getStore().lookupAbstractDataType("LSPSummary");
+		}
+		throw new RuntimeException("Cannot find util::ide::LSP in heap");
+	}
+
 	private static Type getLSPContextType(IEvaluatorContext eval) {
 		ModuleEnvironment coreModule = eval.getHeap().getModule("util::ide::LSP");
 		if (coreModule != null) {
@@ -122,7 +130,7 @@ public class RascalBridge {
 		throw new RuntimeException("Cannot find util::ide::LSP in heap");
 	}
 
-	private static ICallableValue buildReportMoreFunction(IEvaluatorContext ctx, Type constructorType, Consumer<IConstructor> reportTarget) {
+	private static ICallableValue buildReportMoreFunction(IEvaluatorContext ctx, Type constructorType, Supplier<Consumer<IList>> reportTarget) {
 		return new AbstractFunction(ctx.getCurrentAST(), ctx.getEvaluator(), (FunctionType)constructorType.getFieldType("reportMore"), Collections.<KeywordFormal>emptyList(), false, ctx.getCurrentEnvt()) {
 
 			@Override
@@ -142,7 +150,7 @@ public class RascalBridge {
 			}
 
 			public org.rascalmpl.interpreter.result.Result<IValue> call(Type[] argTypes, IValue[] argValues, java.util.Map<String,IValue> keyArgValues) {
-				reportTarget.accept((IConstructor) argValues[0]);
+				reportTarget.get().accept((IList) argValues[0]);
 				return ResultFactory.nothing();
 			};
 		};
@@ -153,7 +161,7 @@ public class RascalBridge {
 	   R apply(T t) throws E;
 	}
 
-	private static ICallableValue buildGetParseTreeFunction(IEvaluatorContext ctx, Type grammarType,Type constructorType, CheckedFunction<ISourceLocation, ITree, IOException> parser) {
+	private static ICallableValue buildGetParseTreeFunction(IEvaluatorContext ctx, Type grammarType,Type constructorType, Supplier<CheckedFunction<ISourceLocation, ITree, IOException>> parser) {
 		return new AbstractFunction(ctx.getCurrentAST(), ctx.getEvaluator(), (FunctionType)constructorType.getFieldType("getParseTree"), Collections.<KeywordFormal>emptyList(), false, ctx.getCurrentEnvt()) {
 
 			@Override
@@ -174,7 +182,7 @@ public class RascalBridge {
 
 			public org.rascalmpl.interpreter.result.Result<IValue> call(Type[] argTypes, IValue[] argValues, java.util.Map<String,IValue> keyArgValues) {
 				try {
-					return ResultFactory.makeResult(grammarType, parser.apply((ISourceLocation) argValues[1]), ctx);
+					return ResultFactory.makeResult(grammarType, parser.get().apply((ISourceLocation) argValues[1]), ctx);
 				}
 				catch (ParseError pe) {
 					ISourceLocation errorLoc = vf.sourceLocation(vf.sourceLocation(pe.getLocation()), pe.getOffset(), pe.getLength(), pe.getBeginLine(), pe.getEndLine(), pe.getBeginColumn(), pe.getEndColumn());
@@ -188,24 +196,35 @@ public class RascalBridge {
 
 	
 	public IConstructor buildEmptySummary(ISourceLocation file) {
-		return vf.constructor(lspContextConstructorType, file, vf.datetime(0));
+		return vf.constructor(lspSummaryType, file, vf.datetime(0));
 	}
 
-	public Summary calculateSummary(ITree tree, Summary previousSummary) {
+	public Summary calculateSummary(ITree tree, Summary previousSummary, ILSPContext ctx) {
 		IValue context = vf.constructor(lspContextConstructorType, previousSummary.getRascalSummary(), pathConfig, parserFunction, reportMoreFunction);
 		synchronized (eval) {
-			Result<IValue> result = calculateSummary.call(summaryCalculationType, new IValue[] { tree, context }, Collections.emptyMap());
-			if (result != null) {
-				return new Summary((IConstructor) result.getValue());
+			currentLspContext.set(ctx);
+			try {
+                Result<IValue> result = calculateSummary.call(summaryCalculationType, new IValue[] { tree, context }, Collections.emptyMap());
+                if (result != null) {
+                    return new Summary((IConstructor) result.getValue());
+                }
+                return null;
 			}
-			return null;
+			finally {
+				currentLspContext.set(null);
+			}
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	public ITree parse(char[] input, ISourceLocation loc) throws ParseError {
 			// TODO: for the future, we could decide not to have parser amb/prod nodes call back into rascal (semantic actions in the parser), so we can avoid the lock.
 //			IActionExecutor<ITree> exec = new RascalFunctionActionExecutor(eval, true);
-			return (ITree) parser.parse(rootName, loc.getURI(), input, /*exec, */new DefaultNodeFlattener<IConstructor, ITree, ISourceLocation>(), new UPTRNodeFactory(allowAmbiguity));
+		try {
+			return (ITree) parser.newInstance().parse(rootName, loc.getURI(), input, /*exec, */new DefaultNodeFlattener<IConstructor, ITree, ISourceLocation>(), new UPTRNodeFactory(allowAmbiguity));
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 		//}
 	}
 	

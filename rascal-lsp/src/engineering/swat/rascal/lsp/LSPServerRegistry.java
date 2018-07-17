@@ -39,8 +39,8 @@ public class LSPServerRegistry {
 			return instances.get(loc);
 		}
 
-		public LSPServer addNewServer(ISourceLocation loc, LSPServer server) {
-			return instances.putIfAbsent(loc, server);
+		public boolean addNewServer(ISourceLocation loc, LSPServer server) {
+			return instances.putIfAbsent(loc, server) == null;
 		}
 
 		public void stopServer(ISourceLocation loc) {
@@ -69,7 +69,7 @@ public class LSPServerRegistry {
 		try {
 			ISourceLocation serverID = guessLSPServerId(port, host);
 			LSPServer server = new LSPServer(vf);
-			if (server == ServerRegistry.INSTANCE.addNewServer(serverID, server)) {
+			if (ServerRegistry.INSTANCE.addNewServer(serverID, server)) {
 				server.start(port.intValue(), host.getValue(), asServer.getValue(), wrapWebSocket.getValue()); // TODO: change interface
 			}
 			return serverID;
@@ -86,7 +86,7 @@ public class LSPServerRegistry {
 			// throw
 			throw RuntimeExceptionFactory.io(vf.string("Non-existing LSP server, did you call startLSP?"), ctx.getCurrentAST(), ctx.getStackTrace());
 		}
-		server.register(languageName.getValue(), extension.getValue(), new RascalBridge(grammar, calculateSummary, capabilities, pathConfig, allowAmbiguity, ctx, null));
+		server.register(languageName.getValue(), extension.getValue(), new RascalBridge(grammar, calculateSummary, capabilities, pathConfig, allowAmbiguity, ctx));
 	}
 	
 	public void stopLSP(ISourceLocation lspServer) {

@@ -2,13 +2,17 @@ module demo::lang::Syntax
 
 import ParseTree;
 extend lang::std::Layout;
+import Message;
+import util::Reflective;
+import DateTime;
+import util::ide::LSP;
+import IO;
 
 lexical Id = [a-zA-Z]+ !>> [a-zA-Z];
 
 start syntax Words = Id* ids;
 
-rel[loc, loc] getUseDef(str contents, loc origin) {
-    p = parse(#start[Words], contents, origin);
+rel[loc, loc] getUseDef(start[Words] p) {
     result = {};
     defined = ();
     for (Id i <- p.top.ids) {
@@ -21,4 +25,32 @@ rel[loc, loc] getUseDef(str contents, loc origin) {
         }
     }
     return result;
+}
+
+loc srv = |lsp://localhost:9000|;
+
+void init() {
+    srv = startLSP(9000, "localhost", asServer=false);
+}
+
+void stop() {
+
+}
+void updateRegistration() {
+    registerLanguage(srv, "Test language", "wdr", #start[Words],
+        LSPSummary (start[Words] t, LSPContext[start[Words]] ctx) {
+            return file(t@\loc, now(), definition = getUseDef(t));
+        }, 
+        {definition()}, pathConfig());
+
+}
+
+
+void testFunc(&T (&T <: Tree, &T <: Tree) mutate) {
+    println("Run?");
+}
+
+
+void callFunc() {
+    testFunc(Id (Id x, Id y) { return x; });
 }

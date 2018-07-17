@@ -12,6 +12,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 }
 module util::ide::LSP
 
+import ParseTree;
+import Message;
 import util::Reflective; 
 
 data LSPSummary(
@@ -39,18 +41,18 @@ data LSPContext[&T <: Tree]
     = context(
         LSPSummary currentSummary,
         PathConfig pathConfig,
-        &T <: Tree (loc l) getParseTree,
-        void (list[Message] msg) reportMore
+        &T (loc l) getParseTree,
+        void (set[Message] msg) reportMore
     );
 
 // start an LSP instance in the background.
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
-@java{engineering.swat.rascal.lsp.LSPServerRegistry}
-loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
+@javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
+java loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
 
-@java{engineering.swat.rascal.lsp.LSPServerRegistry}
+@javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
 @reflect
-void registerLanguage(loc lspServer, str languageName, str extension,
+java void registerLanguage(loc lspServer, str languageName, str extension,
     type[&T <: Tree] grammar, 
     LSPSummary (&T <: Tree tree, LSPContext[&T <: Tree] ctx) calculateSummary, 
     set[LSPCapability[&T <: Tree]] capabilities, 
@@ -69,11 +71,11 @@ data LSPCapability[&T <: Tree]
 
     | documentSymbol(set[SymbolKind] kinds)
     | signatureHelp(set[MarkupKind] formats) // LSPSummary::signature
-    | references(list[loc] (&T tree, loc cursor, LSPContext[&T] ctx) findReferences)
-    | formatting(list[TextEdit] (&T tree, LSPContext[&T] ctx) formatDocument) // aka: pretty printing
-    | rangeFormatting(list[TextEdit] (&T tree, loc range, LSPContext[&T <: Tree] ctx) formatRange) // aka: pretty printing
-    | rename(WorkSpaceEdit (&T tree, loc cursor, str newName, LSPContext[&T <: Tree] ctx) rename)
-    | documentHighlight(rel[loc, HighlightKind] (&T tree, loc cursor, LSPContext[&T <: Tree] ctx) highlighter)  // highlight certain words
+    | references(list[loc] (&T <: Tree tree, loc cursor, LSPContext[&T <: Tree] ctx) findReferences)
+    | formatting(list[TextEdit] (&T <: Tree tree, LSPContext[&T <: Tree] ctx) formatDocument) // aka: pretty printing
+    | rangeFormatting(list[TextEdit] (&T <: Tree tree, loc range, LSPContext[&T <: Tree] ctx) formatRange) // aka: pretty printing
+    | rename(WorkSpaceEdit (&T <: Tree tree, loc cursor, str newName, LSPContext[&T <: Tree] ctx) rename)
+    | documentHighlight(rel[loc, HighlightKind] (&T <: Tree tree, loc cursor, LSPContext[&T <: Tree] ctx) highlighter)  // highlight certain words
     // part of LSP, not yet supported:
     //| completion(_)
     //| hover(_)
