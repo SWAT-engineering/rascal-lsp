@@ -65,14 +65,13 @@ public class LSPServerRegistry {
 		}
 	}
 	
-	public ISourceLocation startLSP(IInteger port, IString host, IBool asServer, IBool wrapWebSocket) {
+	
+	public void startLSP(ISourceLocation lspServer, IBool asServer, IBool wrapWebSocket) {
 		try {
-			ISourceLocation serverID = guessLSPServerId(port, host);
 			LSPServer server = new LSPServer(vf);
-			if (ServerRegistry.INSTANCE.addNewServer(serverID, server)) {
-				server.start(port.intValue(), host.getValue(), asServer.getValue(), wrapWebSocket.getValue()); // TODO: change interface
+			if (ServerRegistry.INSTANCE.addNewServer(lspServer, server)) {
+				server.start(lspServer.getURI().getPort(), lspServer.getURI().getHost(), asServer.getValue(), wrapWebSocket.getValue()); // TODO: change interface
 			}
-			return serverID;
 		} catch (InterruptedException | ExecutionException e) {
 			throw RuntimeExceptionFactory.io(vf.string("Cannot start server: " +e.toString()), null, null);
 		}

@@ -27,10 +27,12 @@ rel[loc, loc] getUseDef(start[Words] p) {
     return result;
 }
 
+
+
 loc srv = |lsp://localhost:9000|;
 
 void init() {
-    srv = startLSP(9000, "localhost", asServer=false);
+    startLSP(srv, asServer=false);
 }
 
 void stop() {

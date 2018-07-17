@@ -45,10 +45,16 @@ data LSPContext[&T <: Tree]
         void (set[Message] msg) reportMore
     );
 
+loc calculateLSPHost(str host, int port)
+    = |lsp://<host>:<"<port>">|;
+
 // start an LSP instance in the background.
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
 @javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
-java loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
+java void startLSP(loc lspServer, bool asServer = true, bool websocket = false);
+
+@javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
+java void stopLSP(loc lspServer);
 
 @javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
 @reflect
