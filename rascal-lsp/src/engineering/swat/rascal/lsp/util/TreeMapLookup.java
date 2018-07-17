@@ -14,25 +14,17 @@ package engineering.swat.rascal.lsp.util;
 
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.TreeMap;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 
-public class TreeMapLookup implements LocationToRangeMap {
+public class TreeMapLookup implements RangeToLocationMap {
 	
-	private final NavigableMap<Location, Location> data = new TreeMap<>(TreeMapLookup::compareLocations);
-	
-	private static int compareLocations(Location a, Location b) {
-		int result = a.getUri().compareTo(b.getUri());
-		if (result != 0) {
-			return result;
-		}
-		return compareRanges(a.getRange(), b.getRange());
-	}
-	
+	private final NavigableMap<Range, Location> data = new TreeMap<>(TreeMapLookup::compareRanges);
+
 	private static int compareRanges(Range a, Range b) {
-		
 		Position aStart = a.getStart();
 		Position aEnd = a.getEnd();
 		Position bStart = b.getStart();
@@ -82,22 +74,22 @@ public class TreeMapLookup implements LocationToRangeMap {
 	}
 
 	@Override
-	public Location lookup(Location from) {
-		Entry<Location, Location> result = data.floorEntry(from);
+	public Optional<Location> lookup(Range from) {
+		Entry<Range, Location> result = data.floorEntry(from);
 		if (result == null) {
 			// could be that it's at the start of the entry
 			result = data.ceilingEntry(from);
 		}
 		if (result != null) {
-            Location match = result.getKey();
-            if (match.getUri().equals(from.getUri()) && rangeContains(match.getRange(), from.getRange())) {
-                return result.getValue();
+            Range match = result.getKey();
+            if (rangeContains(match, from)) {
+                return Optional.of(result.getValue());
             }
 		}
-		return null;
+		return Optional.empty();
 	}
 
-	public void add(Location from, Location to) {
+	public void add(Range from, Location to) {
 		data.put(from, to);
 	}
 	

@@ -32,28 +32,29 @@ data LSPSummary(
 
 data Message(
     str source = "",  // which tool/phase this error message originated from
-    lrel[loc other, str message] relatedInformation = {} // which other locations are also related to this message (for example with double declarations)
+    lrel[loc other, str message] relatedInformation = [] // which other locations are also related to this message (for example with double declarations)
 );
 
 data LSPContext[&T <: Tree]
     = context(
         LSPSummary currentSummary,
         PathConfig pathConfig,
-        &T (loc l) getParseTree,
-        void (loc l, Message msg) reportMore
+        &T <: Tree (loc l) getParseTree,
+        void (list[Message] msg) reportMore
     );
 
 // start an LSP instance in the background.
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
-@java{engineering.swat.rascal.lsp.LSPServer}
+@java{engineering.swat.rascal.lsp.LSPServerRegistry}
 loc startLSP(int port, str host, bool asServer = true, bool websocket = false);
 
-@java{engineering.swat.rascal.lsp.LSPServer}
-void registerLanguage(loc lspServer, str languageName,
-    type[&T <: Tree] grammar,
-    LSPSummary (&T tree, LSPContext[&T] ctx) calculateSummary, 
-    set[LSPCapability[&T]] capabilities, 
-    PathConfig pcfg);
+@java{engineering.swat.rascal.lsp.LSPServerRegistry}
+@reflect
+void registerLanguage(loc lspServer, str languageName, str extension,
+    type[&T <: Tree] grammar, 
+    LSPSummary (&T <: Tree tree, LSPContext[&T <: Tree] ctx) calculateSummary, 
+    set[LSPCapability[&T <: Tree]] capabilities, 
+    PathConfig pcfg, bool allowAmbiguity = false);
 
 // functions can throw this exception to report failures in calculating the requested option.
 // normal errors (like type checking errors) should show up in LSPSummary::diagnostic
@@ -70,9 +71,9 @@ data LSPCapability[&T <: Tree]
     | signatureHelp(set[MarkupKind] formats) // LSPSummary::signature
     | references(list[loc] (&T tree, loc cursor, LSPContext[&T] ctx) findReferences)
     | formatting(list[TextEdit] (&T tree, LSPContext[&T] ctx) formatDocument) // aka: pretty printing
-    | rangeFormatting(list[TextEdit] (&T tree, loc range, LSPContext[&T] ctx) formatRange) // aka: pretty printing
-    | rename(WorkSpaceEdit (&T tree, loc cursor, str newName, LSPContext[&T] ctx) rename)
-    | documentHighlight(rel[loc, HighlightKind] (&T tree, loc cursor, LSPContext[&T] ctx) highlighter)  // highlight certain words
+    | rangeFormatting(list[TextEdit] (&T tree, loc range, LSPContext[&T <: Tree] ctx) formatRange) // aka: pretty printing
+    | rename(WorkSpaceEdit (&T tree, loc cursor, str newName, LSPContext[&T <: Tree] ctx) rename)
+    | documentHighlight(rel[loc, HighlightKind] (&T tree, loc cursor, LSPContext[&T <: Tree] ctx) highlighter)  // highlight certain words
     // part of LSP, not yet supported:
     //| completion(_)
     //| hover(_)
@@ -82,6 +83,11 @@ data LSPCapability[&T <: Tree]
     //| documentColor() // annotates color literals with the color they represent (for color picker functionality)
     //| publishDiagnostics()
     // TODO: all workspace stuff
+    ;
+    
+data MarkupKind 
+    = markdown()
+    | plaintext()
     ;
 
 data TextEdit 
