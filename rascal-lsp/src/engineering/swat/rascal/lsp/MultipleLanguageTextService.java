@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.lang.ref.WeakReference;
 import java.net.URISyntaxException;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -78,6 +80,8 @@ import org.rascalmpl.parser.gtd.exception.ParseError;
 import org.rascalmpl.uri.URIResolverRegistry;
 import org.rascalmpl.uri.URIUtil;
 import org.rascalmpl.values.uptr.ITree;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import engineering.swat.rascal.lsp.model.Language;
 import engineering.swat.rascal.lsp.model.LanguageRegistry;
 import engineering.swat.rascal.lsp.model.Summary;
@@ -85,6 +89,7 @@ import engineering.swat.rascal.lsp.util.RangeToLocationMap;
 import engineering.swat.rascal.lsp.util.TreeMapLookup;
 import io.usethesource.vallang.IConstructor;
 import io.usethesource.vallang.IList;
+import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
 import io.usethesource.vallang.IString;
 import io.usethesource.vallang.ITuple;
@@ -117,22 +122,25 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 		private final ExecutorService rascalSchedular;
 		private final ExecutorService javaSchedular;
 		private volatile StampedReference<String> fileContents;
-		private volatile WeakReference<Language> language; // get's cleared when the language is replaced
+		private volatile CompletableFuture<WeakReference<Language>> language; // get's cleared when the language is replaced
 		private final AtomicReference<CompletableFuture<RangeToLocationMap>> defineMap;
 		private volatile CompletableFuture<Summary> currentSummary;
 		private volatile CompletableFuture<ITree> currentTree;
-		private volatile Summary previousSummary;
+		private volatile CompletableFuture<Summary> previousSummary;
 
-		public FileState(ISourceLocation file, Language language, LanguageRegistry registry, ExecutorService rascalSchedular, ExecutorService javaSchedular) {
+		public FileState(ISourceLocation file, LanguageRegistry registry, ExecutorService rascalSchedular, ExecutorService javaSchedular) {
 			this.file = file;
 			this.rascalSchedular = rascalSchedular;
 			this.javaSchedular = javaSchedular;
-			this.language = new WeakReference<Language>(language);
+			this.language = registry.getAsync(file).thenApply(WeakReference::new);
 			this.registry = registry;
 			this.defineMap = new AtomicReference<>(EMPTY_LOCATION_RANGE_MAP);
 			this.currentTree = EMPTY_TREE;
-			this.previousSummary = emptySummary(language);
-			this.currentSummary = CompletableFuture.completedFuture(emptySummary(language));
+			this.previousSummary = language
+					.thenApply(s -> s.get())
+					.thenApply(l -> l == null ? registry.get(file).get() : l)
+					.thenApply(this::emptySummary);
+			this.currentSummary = previousSummary;
 			this.fileContents = null;
 		}
 		
@@ -185,8 +193,8 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
                 	}
                 }, javaSchedular);
 
-                CompletableFuture<Summary> newSummaryCalculate = newTreeCalculate.thenApplyAsync(
-                		(t) -> getLanguage().getImplementation().calculateSummary(t, previousSummary, parent)
+                CompletableFuture<Summary> newSummaryCalculate = newTreeCalculate.thenCombineAsync(previousSummary, 
+                		(t, s) -> getLanguage().getImplementation().calculateSummary(t, s, parent)
                 , rascalSchedular);
 
                 newSummaryCalculate.thenAcceptAsync((s) -> {
@@ -206,13 +214,22 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 		}
 
 		private Language getLanguage() {
-			Language curLang = language.get();
-			if (curLang == null) {
-			    curLang = registry.get(file);
-			    language = new WeakReference<>(curLang);
-			    previousSummary = emptySummary(curLang);
+			try {
+				Language curLang = language.get().get();
+				if (curLang == null) {
+					curLang = registry.get(file).get();
+					language = CompletableFuture.completedFuture(new WeakReference<>(curLang));
+					previousSummary = CompletableFuture.completedFuture(emptySummary(curLang));
+				}
+				return curLang;
+			} catch (InterruptedException e) {
+				return null;
+			} catch (ExecutionException e) {
+				if (e.getCause() instanceof RuntimeException) {
+					throw (RuntimeException)e.getCause();
+				}
+				throw new RuntimeException(e.getCause());
 			}
-			return curLang;
 		}
 		
 		public CompletableFuture<List<? extends Location>> definition(Range cursor) {
@@ -279,7 +296,9 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 
 	public void replaceDiagnostics(ISourceLocation clearFor, Stream<Entry<ISourceLocation, Diagnostic>> diagnostics) {
 		Map<ISourceLocation, List<Diagnostic>> grouped = groupByKey(diagnostics);
-		grouped.putIfAbsent(clearFor, Collections.emptyList());
+		if (!currentDiagnostics.getOrDefault(clearFor, Collections.emptyList()).isEmpty()) {
+			grouped.putIfAbsent(clearFor, Collections.emptyList());
+		}
 
 		grouped.forEach((file, msgs) -> {
 			client.publishDiagnostics(new PublishDiagnosticsParams(file.getURI().toString(), msgs));
@@ -366,7 +385,7 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 	}
 
 	@Override
-	public void report(IList msgs) {
+	public void report(ISet msgs) {
 		appendDiagnostics(StreamSupport.stream(msgs.spliterator(), false)
 				.map(d -> (IConstructor)d)
 				.map(d -> 
@@ -374,8 +393,8 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
                 			((ISourceLocation)d.get("at")).top()
                 			, translateDiagnostic(d)
                         )
-                		)
-				);
+                    )
+			);
 	}
 
 	public void setCapabilities(ServerCapabilities result) {
@@ -385,15 +404,7 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 	
 	public FileState openExistingOrOpenNew(ISourceLocation loc) {
 		return files.computeIfAbsent(loc, 
-				l -> new FileState(l, getLanguage(registry, l), registry, rascalExecutor, ownExcecutor));
-	}
-
-	private static Language getLanguage(LanguageRegistry registry, ISourceLocation l) {
-		Language result = registry.get(l);
-		if (result == null) {
-			throw new ResponseErrorException(new ResponseError(ResponseErrorCode.InternalError, "No language defined for: " + l, l));
-		}
-		return result;
+				l -> new FileState(l, registry, rascalExecutor, ownExcecutor));
 	}
 
 
@@ -409,13 +420,20 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 	private static ISourceLocation toLoc(TextDocumentIdentifier doc) {
 		return toLoc(doc.getUri());
 	}
+	
+	private static final LoadingCache<String, ISourceLocation> uriToLocCache = Caffeine.newBuilder()
+			.maximumSize(1000)
+			.expireAfterAccess(5, TimeUnit.MINUTES)
+			.build(u -> {
+				try {
+					return URIUtil.createFromURI(u);
+				} catch (URISyntaxException e) {
+					throw new RuntimeException(e);
+				}
+			});
 
 	private static ISourceLocation toLoc(String uri) {
-		try {
-			return URIUtil.createFromURI(uri);
-		} catch (URISyntaxException e) {
-			throw new RuntimeException(e);
-		}
+		return uriToLocCache.get(uri);
 	}
 
 	@Override
@@ -440,8 +458,13 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 		
 	}
 	
+	private static final LoadingCache<ISourceLocation, String> slocToURI = Caffeine.newBuilder()
+			.maximumSize(1000)
+			.expireAfterAccess(5, TimeUnit.MINUTES)
+			.build(l -> l.getURI().toString());
+	
 	private static Location toJSPLoc(ISourceLocation sloc) {
-		return new Location(sloc.getURI().toString(), toRange(sloc));
+		return new Location(slocToURI.get(sloc), toRange(sloc));
 	}
 	private static Range toRange(ISourceLocation sloc) {
 		return new Range(new Position(sloc.getBeginLine() - 1, sloc.getBeginColumn()), new Position(sloc.getEndLine() - 1, sloc.getEndColumn()));

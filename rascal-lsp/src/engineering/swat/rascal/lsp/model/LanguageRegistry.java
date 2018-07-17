@@ -13,27 +13,47 @@
 package engineering.swat.rascal.lsp.model;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import io.usethesource.vallang.ISourceLocation;
 
 public class LanguageRegistry {
 	
-	private Map<String, Language> languages = new ConcurrentHashMap<>();
+	private final Semaphore languagesChanged = new Semaphore(0);
+	private final Map<String, Language> languages = new ConcurrentHashMap<>();
 	
 	public void put(String extension, Language language) {
-		Language oldLanguage = languages.put(extension, language);
-		if (oldLanguage != null) {
-			oldLanguage.markReplaced();
-		}
+		languages.put(extension, language);
+		languagesChanged.release();
 	}
 	
-	public Language get(ISourceLocation loc) {
+	public Optional<Language> get(ISourceLocation loc) {
+		return Optional.ofNullable(languages.get(getExtension(loc)));
+	}
+	
+	private static String getExtension(ISourceLocation loc) {
 		String path = loc.getPath();
 		int extensionIndex = path.lastIndexOf('.');
 		if (extensionIndex <= 0) {
-			return null;
+			throw new IllegalArgumentException("No extension found for: " + loc);
 		}
-		String extension = path.substring(extensionIndex + 1);
-		return languages.getOrDefault(extension, null);
+		return path.substring(extensionIndex + 1);
+	}
+	
+	public CompletableFuture<Language> getAsync(ISourceLocation loc) {
+		String extension = getExtension(loc);
+		return CompletableFuture.supplyAsync(() -> {
+			Language result;
+			while ((result = languages.get(extension)) == null) {
+				try {
+					languagesChanged.acquire();
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
+				}
+			}
+			return result;
+		});
 	}
 }

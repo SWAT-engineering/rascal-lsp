@@ -130,7 +130,7 @@ public class RascalBridge {
 		throw new RuntimeException("Cannot find util::ide::LSP in heap");
 	}
 
-	private static ICallableValue buildReportMoreFunction(IEvaluatorContext ctx, Type constructorType, Supplier<Consumer<IList>> reportTarget) {
+	private static ICallableValue buildReportMoreFunction(IEvaluatorContext ctx, Type constructorType, Supplier<Consumer<ISet>> reportTarget) {
 		return new AbstractFunction(ctx.getCurrentAST(), ctx.getEvaluator(), (FunctionType)constructorType.getFieldType("reportMore"), Collections.<KeywordFormal>emptyList(), false, ctx.getCurrentEnvt()) {
 
 			@Override
@@ -150,7 +150,7 @@ public class RascalBridge {
 			}
 
 			public org.rascalmpl.interpreter.result.Result<IValue> call(Type[] argTypes, IValue[] argValues, java.util.Map<String,IValue> keyArgValues) {
-				reportTarget.get().accept((IList) argValues[0]);
+				reportTarget.get().accept((ISet) argValues[0]);
 				return ResultFactory.nothing();
 			};
 		};

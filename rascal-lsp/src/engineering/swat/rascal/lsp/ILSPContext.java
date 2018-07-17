@@ -14,10 +14,10 @@ package engineering.swat.rascal.lsp;
 
 import java.io.IOException;
 import org.rascalmpl.values.uptr.ITree;
-import io.usethesource.vallang.IList;
+import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
 
 public interface ILSPContext {
 	ITree getTree(ISourceLocation loc) throws IOException;
-	void report(IList msg);
+	void report(ISet msg);
 }
