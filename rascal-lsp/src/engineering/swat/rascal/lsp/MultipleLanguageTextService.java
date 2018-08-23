@@ -296,9 +296,7 @@ public class MultipleLanguageTextService implements TextDocumentService, Languag
 
 	public void replaceDiagnostics(ISourceLocation clearFor, Stream<Entry<ISourceLocation, Diagnostic>> diagnostics) {
 		Map<ISourceLocation, List<Diagnostic>> grouped = groupByKey(diagnostics);
-		if (!currentDiagnostics.getOrDefault(clearFor, Collections.emptyList()).isEmpty()) {
-			grouped.putIfAbsent(clearFor, Collections.emptyList());
-		}
+		grouped.putIfAbsent(clearFor, Collections.emptyList());
 
 		grouped.forEach((file, msgs) -> {
 			client.publishDiagnostics(new PublishDiagnosticsParams(file.getURI().toString(), msgs));

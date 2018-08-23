@@ -12,7 +12,6 @@
  */ 
 package engineering.swat.rascal.lsp;
 
-import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -20,7 +19,6 @@ import org.rascalmpl.interpreter.IEvaluatorContext;
 import org.rascalmpl.interpreter.utils.RuntimeExceptionFactory;
 import io.usethesource.vallang.IBool;
 import io.usethesource.vallang.IConstructor;
-import io.usethesource.vallang.IInteger;
 import io.usethesource.vallang.ISet;
 import io.usethesource.vallang.ISourceLocation;
 import io.usethesource.vallang.IString;
@@ -57,33 +55,26 @@ public class LSPServerRegistry {
 		this.vf = vf;
 	}
 	
-	public ISourceLocation guessLSPServerId(IInteger port, IString host) {
-		try {
-			return vf.sourceLocation("lsp", host.getValue() + ":" + port.intValue(), null);
-		} catch (URISyntaxException e) {
-			throw RuntimeExceptionFactory.io(vf.string("Invalid host or port: " +e.toString()), null, null);
-		}
-	}
-	
-	
-	public void startLSP(ISourceLocation lspServer, IBool asServer, IBool wrapWebSocket) {
-		try {
-			LSPServer server = new LSPServer(vf);
-			if (ServerRegistry.INSTANCE.addNewServer(lspServer, server)) {
-				server.start(lspServer.getURI().getPort(), lspServer.getURI().getHost(), asServer.getValue(), wrapWebSocket.getValue()); // TODO: change interface
-			}
-		} catch (InterruptedException | ExecutionException e) {
-			throw RuntimeExceptionFactory.io(vf.string("Cannot start server: " +e.toString()), null, null);
-		}
-	}
 	
 	public void registerLanguage(ISourceLocation lspServer, IString languageName, IString extension,
 			IValue grammar, IValue calculateSummary, ISet capabilities, 
-			IConstructor pathConfig, IBool allowAmbiguity, IEvaluatorContext ctx) {
+			IConstructor pathConfig, IBool wrapWebSocket, IBool allowAmbiguity, IEvaluatorContext ctx) {
 		LSPServer server = ServerRegistry.INSTANCE.getRunningServer(lspServer);
 		if (server == null) {
-			// throw
-			throw RuntimeExceptionFactory.io(vf.string("Non-existing LSP server, did you call startLSP?"), ctx.getCurrentAST(), ctx.getStackTrace());
+			// try to start it
+			server = new LSPServer();
+			try {
+				if (ServerRegistry.INSTANCE.addNewServer(lspServer, server)) {
+					// if we were the first, we actually start the server
+					server.start(lspServer.getURI().getPort(), lspServer.getURI().getHost(), wrapWebSocket.getValue());
+				}
+				else {
+					server = ServerRegistry.INSTANCE.getRunningServer(lspServer); 
+					assert server != null;
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				throw RuntimeExceptionFactory.io(vf.string("Cannot start server: " +e.toString()), null, null);
+			}
 		}
 		server.register(languageName.getValue(), extension.getValue(), new RascalBridge(grammar, calculateSummary, capabilities, pathConfig, allowAmbiguity, ctx));
 	}

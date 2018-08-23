@@ -37,32 +37,37 @@ data Message(
     lrel[loc other, str message] relatedInformation = [] // which other locations are also related to this message (for example with double declarations)
 );
 
-data LSPContext[&T <: Tree]
+// workaround for ambiguity
+alias PT[&T <: Tree] = &T <: Tree;
+
+data LSPContext
     = context(
         LSPSummary currentSummary,
         PathConfig pathConfig,
-        &T (loc l) getParseTree,
+        PT[&T <: Tree] (type[&T<:Tree] begin, loc l) getParseTree, // can also be used to get the parse tree of a different registered language
         void (set[Message] msg) reportMore
     );
 
-loc calculateLSPHost(str host, int port)
-    = |lsp://<host>:<"<port>">|;
+// every language has it's own port, lsp does not allow multiplexing over the same server connection
+// we do offer sharing between all languages registered within the same execution context (evaluator)
+loc calculateLSPHost(str host, int port) = |lsp://<host>:<"<port>">|;
 
 // start an LSP instance in the background.
 // if asServer is false, it assumes a VS Code like communication style, where we have to be a tcp client instead of server
-@javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
-java void startLSP(loc lspServer, bool asServer = true, bool websocket = false);
+//@javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
+//java void startLSP(loc lspServer, bool asServer = true, bool websocket = false);
 
 @javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
 java void stopLSP(loc lspServer);
 
+// start a new LSP server, or update an existing one (combination of lspServer and languageName)
 @javaClass{engineering.swat.rascal.lsp.LSPServerRegistry}
 @reflect
 java void registerLanguage(loc lspServer, str languageName, str extension,
     type[&T <: Tree] grammar, 
-    LSPSummary (&T <: Tree tree, LSPContext[&T <: Tree] ctx) calculateSummary, 
+    LSPSummary (&T <: Tree tree, LSPContext ctx) calculateSummary, 
     set[LSPCapability[&T <: Tree]] capabilities, 
-    PathConfig pcfg, bool allowAmbiguity = false);
+    PathConfig pcfg, bool webSocket = false, bool allowAmbiguity = false);
 
 // functions can throw this exception to report failures in calculating the requested option.
 // normal errors (like type checking errors) should show up in LSPSummary::diagnostic
@@ -77,11 +82,11 @@ data LSPCapability[&T <: Tree]
 
     | documentSymbol(set[SymbolKind] kinds)
     | signatureHelp(set[MarkupKind] formats) // LSPSummary::signature
-    | references(list[loc] (&T <: Tree tree, loc cursor, LSPContext[&T <: Tree] ctx) findReferences)
-    | formatting(list[TextEdit] (&T <: Tree tree, LSPContext[&T <: Tree] ctx) formatDocument) // aka: pretty printing
-    | rangeFormatting(list[TextEdit] (&T <: Tree tree, loc range, LSPContext[&T <: Tree] ctx) formatRange) // aka: pretty printing
-    | rename(WorkSpaceEdit (&T <: Tree tree, loc cursor, str newName, LSPContext[&T <: Tree] ctx) rename)
-    | documentHighlight(rel[loc, HighlightKind] (&T <: Tree tree, loc cursor, LSPContext[&T <: Tree] ctx) highlighter)  // highlight certain words
+    | references(list[loc] (&T <: Tree tree, loc cursor, LSPContext ctx) findReferences)
+    | formatting(list[TextEdit] (&T <: Tree tree, LSPContext ctx) formatDocument) // aka: pretty printing
+    | rangeFormatting(list[TextEdit] (&T <: Tree tree, loc range, LSPContext ctx) formatRange) // aka: pretty printing
+    | rename(WorkSpaceEdit (&T <: Tree tree, loc cursor, str newName, LSPContext ctx) rename)
+    | documentHighlight(rel[loc, HighlightKind] (&T <: Tree tree, loc cursor, LSPContext ctx) highlighter)  // highlight certain words
     // part of LSP, not yet supported:
     //| completion(_)
     //| hover(_)

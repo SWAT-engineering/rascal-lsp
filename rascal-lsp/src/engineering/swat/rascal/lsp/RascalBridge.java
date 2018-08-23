@@ -50,22 +50,18 @@ import io.usethesource.vallang.type.Type;
 import io.usethesource.vallang.type.TypeFactory;
 
 public class RascalBridge {
-	
-	private static final RascalTypeFactory RTF = RascalTypeFactory.getInstance();
-	private static final TypeFactory TF = TypeFactory.getInstance();
-	
 	private final IValueFactory vf;
 	private final IEvaluatorContext eval;
 	private final Type[] summaryCalculationType;
 	private final ICallableValue calculateSummary;
-	//private final IConstructor startNonTerminal;
 	private final boolean allowAmbiguity;
 	private final IConstructor pathConfig;
 	private final Type grammarType;
 	private final Type lspContextType;
 	private final Type lspContextConstructorType;
-	private final Type lspSummaryType;
+	private final Type lspSummaryConstructorType;
 
+	@SuppressWarnings("rawtypes")
 	private final Class<? extends IGTD> parser;
 	private final String rootName;
 	private final ICallableValue parserFunction;
@@ -74,7 +70,6 @@ public class RascalBridge {
 
 	public RascalBridge(IValue grammar, IValue calculateSummary, ISet capabilities, IConstructor pathConfig, IBool allowAmbiguity, IEvaluatorContext ctx) {
 		this.grammarType = getGrammarType(grammar, grammar.getType());
-		//this.startNonTerminal = (IConstructor)grammar;
 
 		this.pathConfig = pathConfig;
 		this.allowAmbiguity = allowAmbiguity.getValue();
@@ -95,9 +90,9 @@ public class RascalBridge {
 				name += SymbolAdapter.getName(startSort);
 			}
 			rootName = name;
-            lspContextType = ((FunctionType)calculateSummary.getType()).getArgumentTypes().getFieldType(1);
+            lspContextType = getLSPContextType(ctx);
             lspContextConstructorType = getLSPContextConstructorType(ctx);
-            lspSummaryType = getLSPSummaryType(ctx);
+            lspSummaryConstructorType = getLSPSummaryConstructorType(ctx);
             summaryCalculationType = new Type[] { grammarType, lspContextType };
             currentLspContext = new AtomicReference<>(null);
             parserFunction = buildGetParseTreeFunction(eval, grammarType, lspContextConstructorType, () -> currentLspContext.get()::getTree);
@@ -105,10 +100,11 @@ public class RascalBridge {
 		}
 	}
 	
-	private static Type getLSPSummaryType(IEvaluatorContext ctx) {
+	private static Type getLSPSummaryConstructorType(IEvaluatorContext ctx) {
 		ModuleEnvironment coreModule = ctx.getHeap().getModule("util::ide::LSP");
 		if (coreModule != null) {
-			return coreModule.getStore().lookupAbstractDataType("LSPSummary");
+			Type lspSummary = coreModule.getStore().lookupAbstractDataType("LSPSummary");
+			return coreModule.getStore().lookupConstructor(lspSummary, "file").stream().findFirst().orElseThrow(() -> new RuntimeException("Missing context constructor "));
 		}
 		throw new RuntimeException("Cannot find util::ide::LSP in heap");
 	}
@@ -196,14 +192,14 @@ public class RascalBridge {
 
 	
 	public IConstructor buildEmptySummary(ISourceLocation file) {
-		return vf.constructor(lspSummaryType, file, vf.datetime(0));
+		return vf.constructor(lspSummaryConstructorType, file, vf.datetime(0));
 	}
 
 	public Summary calculateSummary(ITree tree, Summary previousSummary, ILSPContext ctx) {
-		IValue context = vf.constructor(lspContextConstructorType, previousSummary.getRascalSummary(), pathConfig, parserFunction, reportMoreFunction);
 		synchronized (eval) {
 			currentLspContext.set(ctx);
 			try {
+				IValue context = vf.constructor(lspContextConstructorType, previousSummary.getRascalSummary(), pathConfig, parserFunction, reportMoreFunction);
                 Result<IValue> result = calculateSummary.call(summaryCalculationType, new IValue[] { tree, context }, Collections.emptyMap());
                 if (result != null) {
                     return new Summary((IConstructor) result.getValue());

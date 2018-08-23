@@ -29,7 +29,7 @@ public class Summary {
 	private static final ISet EMPTY_SET = ValueFactoryFactory.getValueFactory().setWriter().done();
 	
 	public Summary(IConstructor summary) {
-		assert summary.getType().getName().equals("LSPSummary");
+		assert summary != null && summary.getType().getName().equals("LSPSummary");
 		this.summary = summary;
 		this.summaryKW = summary.asWithKeywordParameters();
 	}

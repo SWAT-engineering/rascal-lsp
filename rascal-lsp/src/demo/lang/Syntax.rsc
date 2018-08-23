@@ -27,32 +27,22 @@ rel[loc, loc] getUseDef(start[Words] p) {
     return result;
 }
 
+set[Message] getWarnings(start[Words] p) 
+    = { warning("Check if not an should be used", x@\loc, source = "grammar checker") | /x:(Id)`a` := p}
+    + { info("Rascal rocks", r@\loc, source = "Marketing tool") | /r:(Id)`Rascal` := p }
+    ;
 
 
-loc srv = |lsp://localhost:9000|;
+loc srv = calculateLSPHost("localhost", 9000);
 
-void init() {
-    startLSP(srv, asServer=false);
-}
-
-void stop() {
-
-}
 void updateRegistration() {
     registerLanguage(srv, "Test language", "wdr", #start[Words],
-        LSPSummary (start[Words] t, LSPContext[start[Words]] ctx) {
-            return file(t@\loc, now(), definition = getUseDef(t));
+        LSPSummary (start[Words] t, LSPContext ctx) {
+            return file(t@\loc, now(), 
+                    definition = getUseDef(t),
+                    diagnostics = getWarnings(t)
+                );
         }, 
         {definition()}, pathConfig());
 
-}
-
-
-void testFunc(&T (&T <: Tree, &T <: Tree) mutate) {
-    println("Run?");
-}
-
-
-void callFunc() {
-    testFunc(Id (Id x, Id y) { return x; });
 }
