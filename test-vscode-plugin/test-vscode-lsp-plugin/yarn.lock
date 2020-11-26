@@ -2,60 +2,6 @@
 # yarn lockfile v1
 
 
-"@thi.ng/api@^4.0.4":
-  version "4.0.4"
-  resolved "https://registry.yarnpkg.com/@thi.ng/api/-/api-4.0.4.tgz#ed63110ba8f5f794660ad17c541bd379ed638e5e"
-  dependencies:
-    "@thi.ng/errors" "^0.1.4"
-
-"@thi.ng/checks@^1.5.5":
-  version "1.5.5"
-  resolved "https://registry.yarnpkg.com/@thi.ng/checks/-/checks-1.5.5.tgz#e02b27047ff7f8777c8ff6ac7d62ea08b94999bf"
-
-"@thi.ng/compare@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@thi.ng/compare/-/compare-0.1.4.tgz#c59261d89a0685e01563027396bccfaef188e424"
-
-"@thi.ng/csp@^0.3.49":
-  version "0.3.49"
-  resolved "https://registry.yarnpkg.com/@thi.ng/csp/-/csp-0.3.49.tgz#498ea95aa8b3c995a3360d3f906a9e5361c3795f"
-  dependencies:
-    "@thi.ng/api" "^4.0.4"
-    "@thi.ng/checks" "^1.5.5"
-    "@thi.ng/dcons" "^1.0.5"
-    "@thi.ng/errors" "^0.1.4"
-    "@thi.ng/transducers" "^1.13.0"
-
-"@thi.ng/dcons@^1.0.5":
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/@thi.ng/dcons/-/dcons-1.0.5.tgz#d496f69b8646e503aba14b8303dc4dab308a6364"
-  dependencies:
-    "@thi.ng/api" "^4.0.4"
-    "@thi.ng/checks" "^1.5.5"
-    "@thi.ng/compare" "^0.1.4"
-    "@thi.ng/equiv" "^0.1.5"
-    "@thi.ng/errors" "^0.1.4"
-
-"@thi.ng/equiv@^0.1.5":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@thi.ng/equiv/-/equiv-0.1.5.tgz#d3592f21b74c3c32d81fd0bb8aec55b0bd0246ca"
-  dependencies:
-    "@thi.ng/checks" "^1.5.5"
-
-"@thi.ng/errors@^0.1.4":
-  version "0.1.4"
-  resolved "https://registry.yarnpkg.com/@thi.ng/errors/-/errors-0.1.4.tgz#29b0bf34287c76654574d1d38122891a9f91fdf1"
-
-"@thi.ng/transducers@^1.13.0":
-  version "1.13.0"
-  resolved "https://registry.yarnpkg.com/@thi.ng/transducers/-/transducers-1.13.0.tgz#871375cb13934e9a0a5d4e7af823b423dca3387d"
-  dependencies:
-    "@thi.ng/api" "^4.0.4"
-    "@thi.ng/checks" "^1.5.5"
-    "@thi.ng/compare" "^0.1.4"
-    "@thi.ng/equiv" "^0.1.5"
-    "@thi.ng/errors" "^0.1.4"
-
 "@types/mocha@^2.2.42":
   version "2.2.48"
   resolved "https://registry.yarnpkg.com/@types/mocha/-/mocha-2.2.48.tgz#3523b126a0b049482e1c3c11877460f76622ffab"
@@ -394,7 +340,7 @@ esutils@^2.0.2:
 
 event-stream@^3.3.1, event-stream@^3.3.4, event-stream@~3.3.4:
   version "3.3.4"
-  resolved "http://registry.npmjs.org/event-stream/-/event-stream-3.3.4.tgz#4ab4c9a0f5a54db9338b4c34d86bfce8f4b35571"
+  resolved "https://registry.npmjs.org/event-stream/-/event-stream-3.3.4.tgz#4ab4c9a0f5a54db9338b4c34d86bfce8f4b35571"
   dependencies:
     duplexer "~0.1.1"
     from "~0"
@@ -429,8 +375,8 @@ extend-shallow@^2.0.1:
     is-extendable "^0.1.0"
 
 extend@^3.0.0, extend@~3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/extend/-/extend-3.0.1.tgz#a755ea7bc1adfcc5a31ce7e762dbaadc5e636444"
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/extend/-/extend-3.0.2.tgz#f8b1136b4071fbd8eb140aff858b1019ec2915fa"
 
 extglob@^0.3.1:
   version "0.3.2"
