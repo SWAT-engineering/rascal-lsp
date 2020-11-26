@@ -1,0 +1,86 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "bird",
+    "scopeName": "source.bird",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#otherLiterals"
+        },
+        {
+            "include": "#comments"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.bird",
+                    "match": "\\b(abstract|struct|choice|while|this|it|\\?(?=\\s*\\())\\b"
+                },
+                {
+                    "name":"keyword.operator.bird",
+                    "match": "\\b(this|it|\\.as|<\\-|[+\\-\\!*&\\/%><\\^?:=])\\b"
+                },
+                {
+                    "name": "keyword.control.import.bird",
+                    "match": "\\b(import|module)\\b"
+                },
+                {
+                    "name": "keyword.other.bird",
+                    "match": "\\b(([us][1-9][0-9]*)|int|str|bool|typ)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.bird",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.bird",
+                    "match": "\\\\a[0-7][0-9a-fA-F]"
+                },
+                {
+                    "name": "constant.character.escape.bird",
+                    "match": "\\\\u[0-9a-fA-F]{4}"
+                },
+                {
+                    "name": "constant.character.escape.bird",
+                    "match": "\\\\U[0-9a-fA-F]{6}"
+                },
+                {
+                    "name": "constant.character.escape.bird",
+                    "match": "\\\\[^auU]"
+                }
+            ]
+        },
+        "otherLiterals" : {
+            "patterns": [
+                {
+                    "name": "constant.numeric.bird",
+                    "match": "\\b0(x[0-9a-fA-F_]+|b[01_]+)|\\b[0-9]+\\b"
+                }
+            ]
+
+        },
+        "comments" : {
+            "patterns": [
+                {
+                    "name":"comment.line.bird",
+                    "match": "//.*$"
+                },
+                {
+                    "name":"comment.block.bird",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        }
+    }
+}

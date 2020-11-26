@@ -1,0 +1,26 @@
+{
+    "name": "test-vscode-rascal-dsl",
+    "displayName": "test-vscode-rascal-dsl",
+    "description": "",
+    "version": "0.0.1",
+    "publisher": "RascalMPL",
+    "engines": {
+        "vscode": "^1.24.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "rascaltest",
+            "aliases": ["Rascal Test DSL", "rascaltest"],
+            "extensions": [".wdr"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "rascaltest",
+            "scopeName": "source.words",
+            "path": "./syntaxes/rascaltest.tmLanguage.json"
+        }]
+    }
+}

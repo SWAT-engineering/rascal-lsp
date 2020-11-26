@@ -1,0 +1,32 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Word Language",
+    "scopeName": "source.words",
+    "patterns": [
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [{
+                "name": "keyword.control.words",
+                "match": "\\b(the|for|from|an)\\b"
+            }]
+        },
+        "strings": {
+            "name": "string.quoted.double.words",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.words",
+                    "match": "\\\\."
+                }
+            ]
+        }
+    }
+}

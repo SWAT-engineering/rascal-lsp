@@ -1,0 +1,75 @@
+{
+    "name": "test-vscode-lsp-plugin",
+    "displayName": "test-vscode-lsp-plugin",
+    "description": "Testing LSP plugin",
+    "version": "0.0.1",
+    "publisher": "RascalMPL",
+    "engines": {
+        "vscode": "^1.24.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:extension.sayHello",
+        "onLanguage:plaintext"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "commands": [
+            {
+                "command": "extension.sayHello",
+                "title": "Hello World"
+            }
+        ],
+        "languages": [
+            {
+                "id": "wrd",
+                "aliases": [
+                    "Word Language"
+                ],
+                "extensions": [
+                    ".wdr"
+                ],
+                "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "bird",
+                "aliases": [
+                    "Bird Language"
+                ],
+                "extensions": [
+                    ".bird"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "wrd",
+                "scopeName": "source.words",
+                "path": "./syntaxes/wrd.tmLanguage.json"
+            },
+            {
+                "language": "bird",
+                "scopeName": "source.bird",
+                "path": "./syntaxes/bird.tmLanguage.json"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    },
+    "devDependencies": {
+        "@types/mocha": "^2.2.42",
+        "@types/node": "^7.0.43",
+        "tslint": "^5.8.0",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "vscode-languageclient": "^4.1.4"
+    }
+}
